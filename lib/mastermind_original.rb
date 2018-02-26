@@ -8,27 +8,24 @@ class MasterMind
   attr_accessor :win_combination, :attempts
 
   def initialize
-    init
+    new_game
   end
 
-  def init
+  def new_game
     @attempts = 0
     @win_combination = []
     (0...COMBINATION).each do |i|
       @win_combination[i] = ITEMS.sample(1).first
     end
-    init_message
+    welcome
   end
 
-  def show_combination(combination)
-    combination.join(',').to_s
-  end
-
-  def init_message
+  def welcome
     system 'clear'
     puts ' WELCOME TO MASTERMIND!!!!'
     draw_line
-    puts " You have #{MAX_ATTEMPTS} attempts to find out the correct combination."
+    puts " You have #{MAX_ATTEMPTS} attempts to find out the correct " \
+         'combination.'
     puts " The combination is a random string composed by #{COMBINATION} " \
          'sepparated comma items.'
     print ' You can combine the following items one or more times:'
@@ -49,6 +46,10 @@ class MasterMind
     puts
   end
 
+  def show_combination(combination)
+    combination.join(',').to_s
+  end
+
   def read_option
     options = gets.chomp
     return [] if options.empty?
@@ -60,7 +61,7 @@ class MasterMind
     case option.first
     when 'new', 'newgame', 'n'
       option.clear
-      init
+      new_game
     when 'attempts', 'attempt', 'a'
       option.clear
       puts " ** Attempt number #{@attempts + 1} of #{MAX_ATTEMPTS} ** "
@@ -138,7 +139,7 @@ class MasterMind
       # Game finished. Play again?
       return false unless playagain?
       # initialize game
-      init
+      new_game
     end
   end
 
@@ -151,7 +152,7 @@ class MasterMind
       return false unless check_combination?(combination)
       win
     end
-    #playagain?
+    # playagain?
     true
   end
 
@@ -159,11 +160,12 @@ class MasterMind
     @attempts += 1
     puts " ** Attempt number #{@attempts} of #{MAX_ATTEMPTS} ** "
     if combination.length != COMBINATION
-      puts " Invalid attempt. Ex: #{show_combination(ITEMS.sample(COMBINATION))}."
-      puts ' Try again!'
+      puts ' Wrong combination. Try again!'
     else
       return true if check_items?(combination)
-      puts " Invalid items! Possible items: #{show_combination(ITEMS)}"
+      puts ' One or more items are invalid. Possible items: ' \
+           "#{show_combination(ITEMS)}."
+      puts ' Try again!'
     end
     draw_line
     false
@@ -174,7 +176,7 @@ class MasterMind
     puts 'Do you want to play again? (y/n)'
     answer = gets.chomp
     return false if answer != 'y'
-    init
+    new_game
     true
   end
 end
