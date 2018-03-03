@@ -1,4 +1,4 @@
-# Constacts
+# Constants
 ITEMS = '1 2 3 4 5 6 7 8'.split
 MAX_ATTEMPTS = 10
 COMBINATION = 4
@@ -41,17 +41,22 @@ class MasterMind
     puts ' Enter a combination:'
   end
 
-  def draw_line
-    80.times { print '-' }
-    puts
+  def play
+    while (combination = read_option(gets.chomp))
+      draw_line
+      # Custom commands
+      return false if check_command?(combination)
+      next if combination.empty?
+      # Check combination
+      next unless play_combination?(combination)
+      # Game finished. Play again?
+      return false unless playagain?
+      # initialize game
+      new_game
+    end
   end
 
-  def show_combination(combination)
-    combination.join(',').to_s
-  end
-
-  def read_option
-    options = gets.chomp
+  def read_option(options)
     return [] if options.empty?
     options.split(',')
   end
@@ -64,35 +69,32 @@ class MasterMind
       new_game
     when 'attempts', 'attempt', 'a'
       option.clear
-      puts " ** Attempt number #{@attempts + 1} of #{MAX_ATTEMPTS} ** "
-      draw_line
+      draw_line(" ** Attempt number #{@attempts + 1} of #{MAX_ATTEMPTS} ** ")
     when 'withdraw', 'w'
       option.clear
       lose
       return true unless playagain?
     when 'godmode', '!'
       option.clear
-      puts " ** Winner combination: #{show_combination(@win_combination)} ** "
-      draw_line
+      draw_line(' ** Winner combination: ' \
+                "#{show_combination(@win_combination)} ** ")
     when 'quit', 'exit', 'q'
       return true
     end
     false
   end
 
-  def lose
-    puts '  YOU LOSE!!'
-    puts "  The correct answer was: #{show_combination(@win_combination)}."
-  end
-
-  def win
-    puts '  YOU WIN!!!'
-  end
-
-  def check_items?(combination)
-    check_cols = true
-    combination.each { |col| check_cols &= ITEMS.include?(col) }
-    check_cols
+  def play_combination?(combination)
+    if @attempts >= MAX_ATTEMPTS
+      # Check last combination
+      check_combination?(combination) ? win : lose
+    else
+      return false unless evaluate?(combination)
+      return false unless check_combination?(combination)
+      win
+    end
+    # playagain?
+    true
   end
 
   def check_combination?(combination)
@@ -101,8 +103,7 @@ class MasterMind
     hits = get_hits(combination, combination_cp, win_combination_cp)
     return true if hits == @win_combination.length
     partial_hits = partial_hits(combination_cp, win_combination_cp)
-    puts " You have #{hits} correct hits and #{partial_hits} partial hits"
-    draw_line
+    draw_line(" You have #{hits} correct hits and #{partial_hits} partial hits")
     false
   end
 
@@ -128,58 +129,52 @@ class MasterMind
     partial_hits
   end
 
-  def play
-    while (combination = read_option)
-      draw_line
-      # Custom commands
-      return false if check_command?(combination)
-      next if combination.empty?
-      # Check combination
-      next unless play_combination?(combination)
-      # Game finished. Play again?
-      return false unless playagain?
-      # initialize game
-      new_game
-    end
-  end
-
-  def play_combination?(combination)
-    if @attempts >= MAX_ATTEMPTS
-      # Check last combination
-      check_combination?(combination) ? win : lose
-    else
-      return false unless evaluate?(combination)
-      return false unless check_combination?(combination)
-      win
-    end
-    # playagain?
-    true
-  end
-
   def evaluate?(combination)
     @attempts += 1
     puts " ** Attempt number #{@attempts} of #{MAX_ATTEMPTS} ** "
     if combination.length != COMBINATION
-      puts ' Wrong combination. Try again!'
+      puts ' Wrong combination.'
     else
       return true if check_items?(combination)
       puts ' One or more items are invalid. Possible items: ' \
            "#{show_combination(ITEMS)}."
-      puts ' Try again!'
     end
-    draw_line
+    draw_line(' Try again!')
     false
   end
 
+  def check_items?(combination)
+    check_cols = true
+    combination.each { |col| check_cols &= ITEMS.include?(col) }
+    check_cols
+  end
+
+  def lose
+    puts '  YOU LOSE!!'
+    puts "  The correct answer was: #{show_combination(@win_combination)}."
+  end
+
+  def win
+    puts '  YOU WIN!!!'
+  end
+
   def playagain?
-    draw_line
-    puts 'Do you want to play again? (y/n)'
+    draw_line(nil, 'Do you want to play again? (y/n)')
     answer = gets.chomp
     return false if answer != 'y'
     new_game
     true
   end
+
+  def draw_line(before = nil, after = nil)
+    puts before unless before.nil?
+    80.times { print '-' }
+    puts
+    puts after unless after.nil?
+  end
+
+  def show_combination(combination)
+    combination.join(',').to_s
+  end
 end
 
-game = MasterMind.new
-game.play
