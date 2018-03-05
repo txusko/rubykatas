@@ -1,8 +1,8 @@
 MINE = '*'.freeze
 FIELD = '.'.freeze
 DEF_SEPARATOR = ''.freeze
-DEF_DIMENSION = [8, 8].freeze
-DEF_MINES = 10
+DEF_DIMENSION = [4, 4].freeze
+DEF_MINES = 3
 
 # Class MinesWeeper
 class MinesWeeper
@@ -33,8 +33,7 @@ class MinesWeeper
     while (line = gets.chomp.strip)
       return result if line == '0 0'
       next unless (dim_line = read_numbers(line))
-      result += "Field \##{field}\n"
-      result += read_board_line(dim_line[0], dim_line[1])
+      result += read_board_line(dim_line[0], dim_line[1], field)
       field += 1
     end
   end
@@ -47,14 +46,15 @@ class MinesWeeper
   end
 
   # Read a board line. Ex .*..
-  def read_board_line(rows, cols)
+  def read_board_line(rows, cols, field)
     board = gen_board([rows, cols])
     num_row = 0
     while (line = gets.chomp.strip)
       next unless line.length >= cols
       board[num_row] = line.scan(/\W/)
       num_row += 1
-      return show_board(gen_solution(board)) if num_row >= rows
+      next unless num_row >= rows
+      return "Field \##{field}\n#{show_board(gen_solution(board))}"
     end
   end
 
