@@ -1,3 +1,3 @@
 require './lib/minesweeper'
-config = { dimension: [8, 8], separator: ' ', mines: 10 }
+config = { dimension: [2, 2], separator: ' ', mines: 1 }
 MinesWeeper.new(config: config).continous_play

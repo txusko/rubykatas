@@ -14,9 +14,9 @@ class MinesWeeper
     initialize_config(attributes[:config])
     @game_board = attributes[:game_board]
     @solution = attributes[:solution]
-    # new_game unless @game_board
   end
 
+  # Initialize config with default values if needed
   def initialize_config(config)
     @config = config
     @config ||= { dimension: DEF_DIMENSION, mines: DEF_MINES,
@@ -26,29 +26,28 @@ class MinesWeeper
     @config[:separator] ||= DEF_SEPARATOR
   end
 
-  def start
-    puts read_dimensions
-  end
-
-  def read_dimensions
+  # Suggested Test Cases
+  def test_case
     result = ''
     field = 1
     while (line = gets.chomp.strip)
       return result if line == '0 0'
-      next unless (dim_line = read_line_dim(line))
+      next unless (dim_line = read_numbers(line))
       result += "Field \##{field}\n"
-      result += read_board_lines(dim_line[0], dim_line[1])
+      result += read_board_line(dim_line[0], dim_line[1])
       field += 1
     end
   end
 
-  def read_line_dim(line)
+  # Read a pair of numbers. Ex: 4 4
+  def read_numbers(line)
     dim_line = /^(\d{1}) (\d{1})$/.match line
     return nil unless dim_line
     [dim_line[1].to_i, dim_line[2].to_i]
   end
 
-  def read_board_lines(rows, cols)
+  # Read a board line. Ex .*..
+  def read_board_line(rows, cols)
     board = gen_board([rows, cols])
     num_row = 0
     while (line = gets.chomp.strip)
@@ -68,7 +67,7 @@ class MinesWeeper
   end
 
   # Generate the position of n random mines (@config[:mines])
-  # relative to the dimension param
+  # (relative to the dimension param)
   def gen_mines(dimension)
     mines = []
     @config[:mines].times do
@@ -88,7 +87,7 @@ class MinesWeeper
     solution
   end
 
-  # Relative positions around the current position (x, y)
+  # Relative positions around a position (x, y)
   def positions(x, y)
     [
       [x - 1, y - 1], [x - 1, y], [x - 1, y + 1],
@@ -134,41 +133,21 @@ class MinesWeeper
   def show_board(board)
     return unless board
     result = ''
-    board.each { |i| result += ' ' + i.join(@config[:separator]) + "\n" }
+    board.each do |i|
+      result += @config[:separator] + i.join(@config[:separator]) + "\n"
+    end
     result += "\n"
   end
 
-  def continous_play
-    loop do
-      play
-      print 'Do you want to play again? (y/n) '
-      break unless gets.chomp.strip == 'y'
-    end
-  end
-
-  def play
-    new_game
-    mines = @game_board.select { |x| x.select { |y| y == MINE } }.length
-    while (line = gets.chomp.strip)
-      return false if line == 'q'
-      ok = turn?(line)
-      dots_left = 0
-      @player_board.each { |x| x.each { |y| dots_left += 1 if y == FIELD } }
-      if dots_left <= mines
-        system 'clear'
-        puts 'You win!!'
-        show_solution
-        return true
-      end
-      next if ok
-      puts 'You lose!!'
-      return false
-    end
+  # Welcome message
+  def welcome
+    system 'clear'
+    puts 'MinesWeeper'
+    puts
   end
 
   # Initialize a new game
   def new_game
-    system 'clear'
     welcome
     @game_board = gen_board(@config[:dimension])
     @solution = gen_solution(@game_board)
@@ -176,25 +155,62 @@ class MinesWeeper
     show_player_board
   end
 
-  def welcome
-    puts 'MinesWeeper'
-    puts
+  # Play again mode
+  def continous_play
+    loop do
+      play
+      puts
+      print 'Do you want to play again? (y/n) '
+      break unless gets.chomp.strip == 'y'
+    end
   end
 
+  # Play a game
+  def play
+    new_game
+    while (line = gets.chomp.strip)
+      return false if line == 'q'
+      mine_found = turn?(line)
+      return true if end_game?(mine_found)
+    end
+  end
+
+  # Play a turn
   def turn?(line)
-    puts 'Wrong combination. Ex: 1 1' unless (pos = read_line_dim(line))
+    pos = read_numbers(line)
+    puts 'Wrong combination. Ex: 1 1' unless pos
     return true unless pos && @player_board[pos[0]]
-    @player_board[pos[0]][pos[1]] = @solution[pos[0]][pos[1]]
-    ok = check_mine?(@solution[pos[0]][pos[1]])
-    turn_message(ok, line)
-    !ok
+    cell = @solution[pos[0]][pos[1]]
+    @player_board[pos[0]][pos[1]] = cell
+    turn_message(check_mine?(cell), line)
   end
 
-  def turn_message(ok, line)
-    system 'clear'
+  # Play a turn message
+  def turn_message(mine_found, line)
     welcome
     show_player_board
     puts line
-    puts ok ? ' ... BOOM!' : 'Dig again!'
+    puts mine_found ? ' ... BOOM!' : 'Dig again!'
+    mine_found
+  end
+
+  # Check the end of the game
+  def end_game?(mine_found)
+    mines = 0
+    @solution.each { |x| x.each { |y| mines += 1 if y == MINE } }
+    dots = 0
+    @player_board.each { |x| x.each { |y| dots += 1 if y == FIELD } }
+    return true if dots <= mines && win
+    return false unless mine_found
+    puts 'You lose!!'
+    true
+  end
+
+  # User has win
+  def win
+    welcome
+    show_solution
+    puts 'You win!!'
+    true
   end
 end

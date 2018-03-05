@@ -1,2 +1,2 @@
 require './lib/minesweeper'
-MinesWeeper.new.start
+puts MinesWeeper.new.test_case
