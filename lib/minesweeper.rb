@@ -1,6 +1,7 @@
 MINE = '*'.freeze
 FIELD = '.'.freeze
-DEF_SEPARATOR = ''.freeze
+MARK = '!'.freeze
+DEF_SEPARATOR = ' '.freeze
 DEF_DIMENSION = [4, 4].freeze
 DEF_MINES = 3
 
@@ -40,7 +41,8 @@ class MinesWeeper
 
   # Read a pair of numbers. Ex: 4 4
   def read_numbers(line)
-    dim_line = /^(\d{1}) (\d{1})$/.match line
+    line = line[1, line.length] if line[0] == 'm'
+    dim_line = /^(\d{1}) (\d{1})$/.match line.strip
     return nil unless dim_line
     [dim_line[1].to_i, dim_line[2].to_i]
   end
@@ -54,7 +56,7 @@ class MinesWeeper
       board[num_row] = line.scan(/\W/)
       num_row += 1
       next unless num_row >= rows
-      return "Field \##{field}\n#{show_board(gen_solution(board))}"
+      return "Field \##{field}\n#{show_board(gen_solution(board))}\n"
     end
   end
 
@@ -117,32 +119,58 @@ class MinesWeeper
   # Show the game board
   def show_game_board
     puts show_board(@game_board)
+    puts
   end
 
   # Show the solution board
   def show_solution
-    puts show_board(@solution)
+    puts show_player_board(@solution)
+    puts
   end
 
   # Show the player board
-  def show_player_board
-    puts show_board(@player_board)
+  def show_player_board(board)
+    return nil unless board && board[0]
+    puts show_axis(board[0].length)
+    puts show_line(board[0].length)
+    puts show_board(board, true)
+    puts show_line(board[0].length)
+    puts
+  end
+
+  def show_axis(elements)
+    return unless elements || elements > 0
+    res = ' ' * 4
+    (0...elements).each { |index| res += index.to_s + @config[:separator] }
+    res += "\n"
+  end
+
+  def show_line(elements)
+    res = ' ' * 3
+    (0..elements).each { res += '--' }
+    res[0, res.length - 1]
   end
 
   # Show a board
-  def show_board(board)
+  def show_board(board, axis = false)
     return unless board
     result = ''
-    board.each do |i|
-      result += @config[:separator] + i.join(@config[:separator]) + "\n"
+    board.each_with_index do |el, index|
+      result += index.to_s + @config[:separator] + '| ' if axis
+      result += el.join(@config[:separator])
+      result += @config[:separator] + '|' if axis
+      result += "\n"
     end
-    result += "\n"
+    result
   end
 
   # Welcome message
   def welcome
     system 'clear'
-    puts 'MinesWeeper'
+    puts
+    title = ' ** MinesWeeper ** '
+    puts title
+    puts '-' * title.length
     puts
   end
 
@@ -152,7 +180,7 @@ class MinesWeeper
     @game_board = gen_board(@config[:dimension])
     @solution = gen_solution(@game_board)
     @player_board = gen_board(@config[:dimension], [])
-    show_player_board
+    show_player_board(@player_board)
   end
 
   # Play again mode
@@ -178,20 +206,25 @@ class MinesWeeper
   # Play a turn
   def turn?(line)
     pos = read_numbers(line)
-    puts 'Wrong combination. Ex: 1 1' unless pos
-    return true unless pos && @player_board[pos[0]]
+    puts 'Wrong combination. Ex: "1 1" or "m 2 3"' unless pos
+    return false unless pos && @player_board[pos[0]]
     cell = @solution[pos[0]][pos[1]]
-    @player_board[pos[0]][pos[1]] = cell
-    show_zeros(pos[0], pos[1]) if cell == '0'
-    turn_message(check_mine?(cell), line)
+    if line[0] == 'm'
+      mark_mine(pos[0], pos[1])
+      turn_message(false, line)
+    else
+      @player_board[pos[0]][pos[1]] = cell
+      show_zeros(pos[0], pos[1]) if cell == '0'
+      turn_message(check_mine?(cell), line)
+    end
   end
 
   # Play a turn message
   def turn_message(mine_found, line)
     welcome
-    show_player_board
-    puts line
-    puts mine_found ? ' ... BOOM!' : 'Well done! Dig again ...'
+    show_player_board(@player_board)
+    print line
+    puts mine_found ? ' - BOOM!!!'.red : ' - Well done! Dig again ...'.green
     mine_found
   end
 
@@ -211,7 +244,7 @@ class MinesWeeper
   def win
     welcome
     show_solution
-    puts 'You win!!'
+    puts 'You win!!'.green
     true
   end
 
@@ -226,5 +259,25 @@ class MinesWeeper
         @player_board[x1][y1] = @solution[x1][y1]
       end
     end
+  end
+
+  def mark_mine(x, y)
+    return unless @solution[x] && x >= 0 && y >= 0
+    @player_board[x][y] = MARK
+  end
+end
+
+class String
+  # colorization
+  def colorize(color_code)
+    "\e[#{color_code}m#{self}\e[0m"
+  end
+
+  def red
+    colorize(31)
+  end
+
+  def green
+    colorize(32)
   end
 end

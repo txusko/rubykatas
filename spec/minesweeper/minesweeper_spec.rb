@@ -30,14 +30,14 @@ describe 'test case' do
   it 'read board lines 1' do
     board = ['*...', '....', '.*..', '....']
     result = @game.show_board(@game.gen_solution(board))
-    res = "*100\n2210\n1*10\n1110\n\n"
+    res = "*100\n2210\n1*10\n1110\n"
     expect(result).to eq(res)
   end
 
   it 'read board lines 2' do
     board = ['**...', '.....', '.*...']
     result = @game.show_board(@game.gen_solution(board))
-    res = "**100\n33200\n1*100\n\n"
+    res = "**100\n33200\n1*100\n"
     expect(result).to eq(res)
   end
 
