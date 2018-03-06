@@ -27,13 +27,19 @@ class MinesWeeper
     @config[:separator] ||= DEF_SEPARATOR
   end
 
+  def read_line
+    puts
+    print 'Enter a combination: '
+    gets.chomp.strip
+  end
+
   # Suggested Test Cases
   def test_case
     result = ''
     field = 1
-    while (line = gets.chomp.strip)
+    while (line = read_line)
       return result if line == '0 0'
-      next unless (dim_line = read_numbers(line))
+      next unless (dim_line = gets.chomp.strip)
       result += read_board_line(dim_line[0], dim_line[1], field)
       field += 1
     end
@@ -47,11 +53,38 @@ class MinesWeeper
     [dim_line[1].to_i, dim_line[2].to_i]
   end
 
+  def check_numbers?(pos)
+    error = 0
+    error = 1 unless pos
+    message = ''
+    if pos
+      error = 2 if pos[0] < 0 || pos[1] < 0
+      error = 3 if pos[1] >= @solution[0].length
+      error = 4 if pos[0] >= @solution.length
+      message += pos[0].to_s + ' ' + pos[1].to_s + ' - '
+    end
+    unless error.zero?
+      message += error_message(error).red
+      puts message
+    end
+    error.zero?
+  end
+
+  def error_message(error_number)
+    case error_number
+    when 1 then 'Wrong combination (row column) Examples: \'1 1\' or \'m 2 3\'.'
+    when 2 then 'Wrong combination. Row and column numbers should be positive.'
+    when 3 then 'Wrong combination. Row number outside the board limits.'
+    when 4 then 'Wrong combination. Column number outside the board limits.'
+    else 'Unexpected error'
+    end
+  end
+
   # Read a board line. Ex .*..
   def read_board_line(rows, cols, field)
     board = gen_board([rows, cols])
     num_row = 0
-    while (line = gets.chomp.strip)
+    while (line = read_line)
       next unless line.length >= cols
       board[num_row] = line.scan(/\W/)
       num_row += 1
@@ -89,22 +122,22 @@ class MinesWeeper
     solution
   end
 
-  # Relative positions around a position (x, y)
-  def positions(x, y)
+  # Relative positions around a position (row, col)
+  def positions(row, col)
     [
-      [x - 1, y - 1], [x - 1, y], [x - 1, y + 1],
-      [x, y - 1], [x, y + 1],
-      [x + 1, y - 1], [x + 1, y], [x + 1, y + 1]
+      [row - 1, col - 1], [row - 1, col], [row - 1, col + 1],
+      [row, col - 1], [row, col + 1],
+      [row + 1, col - 1], [row + 1, col], [row + 1, col + 1]
     ]
   end
 
   # Return the number of mines in the board around the current position (x, y)
-  def num_mines(board, x, y)
-    return MINE if check_mine?(board[x][y])
+  def num_mines(board, row, col)
+    return MINE if check_mine?(board[row][col])
     num = 0
-    positions(x, y).map do |x1, y1|
-      next unless board[x1] && x1 >= 0 && y1 >= 0
-      num += 1 if check_mine?(board[x1][y1])
+    positions(row, col).map do |x, y|
+      next unless board[x] && x >= 0 && y >= 0
+      num += 1 if check_mine?(board[x][y])
     end
     num.to_s
   end
@@ -135,6 +168,9 @@ class MinesWeeper
     puts show_line(board[0].length)
     puts show_board(board, true)
     puts show_line(board[0].length)
+    puts " - Mines: #{number_of_mines}"
+    puts " - Marked: #{number_of_marked_mines}"
+    puts " - Dots: #{number_of_dots - number_of_mines}"
     puts
   end
 
@@ -165,7 +201,7 @@ class MinesWeeper
   end
 
   # Welcome message
-  def welcome
+  def title
     system 'clear'
     puts
     title = ' ** MinesWeeper ** '
@@ -174,13 +210,24 @@ class MinesWeeper
     puts
   end
 
+  def welcome
+    puts "There are #{number_of_mines} hidden mines in the game board. "
+    puts "Enter combinations of numbers (Ex. 0 0) to show what's behind " \
+         'each dot, but be careful to not hit on a mine.'
+    puts 'Your mission is to discover all the dots without a mine behind.'
+    puts 'Additional commands:'
+    puts ' - Mark mines: m 0 0'
+    puts ' - Quit game: q'
+  end
+
   # Initialize a new game
   def new_game
-    welcome
     @game_board = gen_board(@config[:dimension])
     @solution = gen_solution(@game_board)
     @player_board = gen_board(@config[:dimension], [])
+    title
     show_player_board(@player_board)
+    welcome
   end
 
   # Play again mode
@@ -196,74 +243,88 @@ class MinesWeeper
   # Play a game
   def play
     new_game
-    while (line = gets.chomp.strip)
+    while (line = read_line)
       return false if line == 'q'
-      mine_found = turn?(line)
+      pos = read_numbers(line)
+      next unless check_numbers?(pos)
+      mine_found = turn?(pos, line)
       return true if end_game?(mine_found)
     end
   end
 
   # Play a turn
-  def turn?(line)
-    pos = read_numbers(line)
-    puts 'Wrong combination. Ex: "1 1" or "m 2 3"' unless pos
+  def turn?(pos, line)
     return false unless pos && @player_board[pos[0]]
     cell = @solution[pos[0]][pos[1]]
-    if line[0] == 'm'
-      mark_mine(pos[0], pos[1])
-      turn_message(false, line)
-    else
-      @player_board[pos[0]][pos[1]] = cell
-      show_zeros(pos[0], pos[1]) if cell == '0'
-      turn_message(check_mine?(cell), line)
-    end
+    mark_mine(pos[0], pos[1]) if line[0] == 'm'
+    mine_found = if line[0] != 'm'
+                   @player_board[pos[0]][pos[1]] = cell
+                   show_zeros(pos[0], pos[1]) if cell == '0'
+                   check_mine?(cell)
+                 end
+    turn_message(mine_found, line)
+    mine_found
   end
 
   # Play a turn message
   def turn_message(mine_found, line)
-    welcome
+    title
     show_player_board(@player_board)
-    print line
-    puts mine_found ? ' - BOOM!!!'.red : ' - Well done! Dig again ...'.green
-    mine_found
+    mes = line + ' - '
+    mes += mine_found ? 'BOOM!!!'.red : 'Well done! Dig again ...'.green
+    puts mes
   end
 
   # Check the end of the game
   def end_game?(mine_found)
-    mines = 0
-    @solution.each { |x| x.each { |y| mines += 1 if y == MINE } }
-    dots = 0
-    @player_board.each { |x| x.each { |y| dots += 1 if y == FIELD } }
-    return true if dots <= mines && win
+    return true if number_of_dots <= number_of_mines && win
     return false unless mine_found
     puts 'You lose!!'
     true
   end
 
+  def number_of_dots
+    number_of_items(@player_board, FIELD) + number_of_marked_mines
+  end
+
+  def number_of_marked_mines
+    number_of_items(@player_board, MARK)
+  end
+
+  def number_of_mines
+    number_of_items(@solution, MINE)
+  end
+
+  def number_of_items(board, item)
+    items = 0
+    board.each { |x| x.each { |y| items += 1 if y == item } }
+    items
+  end
+
   # User has win
   def win
-    welcome
+    title
     show_solution
     puts 'You win!!'.green
     true
   end
 
   # Show all zeros around the checked position (x, y)
-  def show_zeros(x, y)
-    positions(x, y).map do |x1, y1|
-      next unless @solution[x1] && x1 >= 0 && y1 >= 0
-      if @solution[x1][y1] == '0' && @player_board[x1][y1] == FIELD
-        @player_board[x1][y1] = @solution[x1][y1]
-        show_zeros(x1, y1)
-      elsif @solution[x1][y1] != MINE && @player_board[x1][y1] == FIELD
-        @player_board[x1][y1] = @solution[x1][y1]
+  def show_zeros(row, col)
+    positions(row, col).map do |x, y|
+      next unless @solution[x] && x >= 0 && y >= 0
+      if @solution[x][y] == '0' && @player_board[x][y] == FIELD
+        @player_board[x][y] = @solution[x][y]
+        show_zeros(x, y)
+      elsif @solution[x][y] != MINE && @player_board[x][y] == FIELD
+        @player_board[x][y] = @solution[x][y]
       end
     end
   end
 
-  def mark_mine(x, y)
-    return unless @solution[x] && x >= 0 && y >= 0
-    @player_board[x][y] = MARK
+  def mark_mine(row, col)
+    return unless @solution[row] && row >= 0 && col >= 0
+    @player_board[row][col] = MARK
   end
 end
 
