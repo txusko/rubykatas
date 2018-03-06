@@ -182,6 +182,7 @@ class MinesWeeper
     return true unless pos && @player_board[pos[0]]
     cell = @solution[pos[0]][pos[1]]
     @player_board[pos[0]][pos[1]] = cell
+    show_zeros(pos[0], pos[1]) if cell == '0'
     turn_message(check_mine?(cell), line)
   end
 
@@ -190,7 +191,7 @@ class MinesWeeper
     welcome
     show_player_board
     puts line
-    puts mine_found ? ' ... BOOM!' : 'Dig again!'
+    puts mine_found ? ' ... BOOM!' : 'Well done! Dig again ...'
     mine_found
   end
 
@@ -212,5 +213,18 @@ class MinesWeeper
     show_solution
     puts 'You win!!'
     true
+  end
+
+  # Show all zeros around the checked position (x, y)
+  def show_zeros(x, y)
+    positions(x, y).map do |x1, y1|
+      next unless @solution[x1] && x1 >= 0 && y1 >= 0
+      if @solution[x1][y1] == '0' && @player_board[x1][y1] == FIELD
+        @player_board[x1][y1] = @solution[x1][y1]
+        show_zeros(x1, y1)
+      elsif @solution[x1][y1] != MINE && @player_board[x1][y1] == FIELD
+        @player_board[x1][y1] = @solution[x1][y1]
+      end
+    end
   end
 end

@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'minesweeper'
 
-describe 'general' do
+describe 'test case' do
   before do
     @game = MinesWeeper.new
   end
